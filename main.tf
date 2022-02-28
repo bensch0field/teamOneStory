@@ -2,7 +2,8 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 4.0"
+      ## will need to terraform init -upgrade 
     }
   }
 }
@@ -277,7 +278,7 @@ resource "aws_security_group" "allowall_org2" {
 # key pair
 resource "aws_key_pair" "defualt" {
   key_name   = "Team_one"
-  public_key = " YOU WILL NEED TO GENERATE YOUR OWN KEY PAIR"
+  public_key = "YOU HAVE TO MAKE YOUR OWN KEYPAIR"
 }
 
 
@@ -330,7 +331,45 @@ resource "aws_instance" "org2_back_server" {
   }
 }
 
-##print stuff if need
-output "public_id" {
-  value = aws_eip.org1_webserver.id
+
+resource "aws_s3_bucket" "b" {
+  bucket = "team-one-devops-sercure"
+  ## has to be unique
+  # bucket will habve to be unique 
+  tags = {
+    Name        = "My bucket"
+    Environment = "live"
+  }
 }
+
+resource "aws_s3_bucket_acl" "example" {
+  bucket = aws_s3_bucket.b.id
+  acl    = "private"
+}
+
+
+#s3 end point
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.org1_vpc.id
+  service_name = "com.amazonaws.us-east-1.s3"
+  policy       = <<POLICY
+{
+    "Statement": [
+        {
+            "Action": "*",
+            "Effect": "Allow",
+            "Resource": "*",
+            "Principal": "*"
+        }
+    ]
+}
+POLICY
+}
+
+
+#associat the end point 
+resource "aws_vpc_endpoint_route_table_association" "s3_public" {
+  route_table_id  = aws_route_table.org1_route_table.id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
